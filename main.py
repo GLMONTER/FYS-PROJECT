@@ -6,6 +6,8 @@ from os.path import exists
 import threading
 import signal
 import time
+from random import random
+from datetime import date
 
 #so the save function knows in which order to stitch videos in
 firstFlag = True
@@ -38,21 +40,25 @@ def stopVideo():
    # os.system("rm /media/pi/videos/unsaved/secondary.h264")
     
 def saveVideo():
+    #to help generate random file name so no video file gets overwritten
+    fileName = str(random())
     #check if we need to merge the second video
     if exists("secondary.h264"):
         if firstFlag:
-            os.system("mkvmerge -o video.mkv /media/pi/videos/unsaved/primary.h264 +/media/pi/videos/unsaved/secondary.h264")
-            os.system("rm /media/pi/videos/unsaved/primary.h264")
-            os.system("rm /media/pi/videos/unsaved/secondary.h264")
+            finalActionMergePrim = "mkvmerge -o {}.mkv /media/pi/videos/unsaved/primary.h264 +/media/pi/videos/unsaved/secondary.h264"
+            os.system(finalActionMergePrim.format(fileName))
+           
         else:
-            os.system("mkvmerge -o video.mkv /media/pi/videos/unsaved/secondary.h264 +/media/pi/videos/unsaved/secondary.h264")
-            os.system("rm /media/pi/videos/unsaved/primary.h264")
-            os.system("rm /media/pi/videos/unsaved/secondary.h264")
+            finalActionMergeSec = "mkvmerge -o {}.mkv /media/pi/videos/unsaved/secondary.h264 +/media/pi/videos/unsaved/primary.h264"
+            os.system(finalActionMergeSec.format(fileName))           
     #merge video(s) and move final export to external media
     else:
-        os.system("mkvmerge -o video.mkv /media/pi/videos/unsaved/primary.h264")
-        os.system("mv video.mkv /media/pi/videos/videos")
-        os.system("rm /media/pi/videos/unsaved/primary.h264")
+        
+        finalActionMerge = "mkvmerge -o {}.mkv /media/pi/videos/unsaved/primary.h264"
+        os.system(finalActionMerge.format(fileName))
+        print(fileName)
+        finalActionMove = "mv {}.mkv /media/pi/videos/videos"
+        os.system(finalActionMove.format(fileName))
 
 #init a thread for handling recording
 thread1 = threading.Thread(target=handleRecord)
