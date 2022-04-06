@@ -19,12 +19,12 @@ def handleRecord():
     while True:
         
         firstFlag = True
-        os.system("./libcamera-vid --nopreview -t 600000 -o /media/pi/videos/unsaved/primary.h264 -s")
+        os.system("./libcamera-vid  -t 600000 -o /media/pi/videos/unsaved/primary.h264 -s")
         if exitFlag:
             break
         
         firstFlag = False
-        os.system("./libcamera-vid --nopreview -t 600000 -o /media/pi/videos/unsaved/secondary.h264 -s")
+        os.system("./libcamera-vid -t 600000 -o /media/pi/videos/unsaved/secondary.h264 -s")
         if exitFlag:
             break
         
