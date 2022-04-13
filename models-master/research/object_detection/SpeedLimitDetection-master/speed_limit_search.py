@@ -19,20 +19,11 @@ from PIL import Image,ImageEnhance,ImageFilter
 import pytesseract
 pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 
-
-
 sys.path.append("..")
-
-
-
 
 from utils import label_map_util
 
 from utils import visualization_utils as vis_util
-
-
-
-
 
 # What model to use.
 MODEL_NAME = 'speed_limit_graph'
@@ -46,10 +37,6 @@ PATH_TO_LABELS = os.path.join('training', 'object_detection.pbtxt')
 
 NUM_CLASSES = 1
 
-
-
-
-
 detection_graph = tf.Graph()
 with detection_graph.as_default():
   od_graph_def = tf.compat.v1.GraphDef()
@@ -59,14 +46,9 @@ with detection_graph.as_default():
     tf.import_graph_def(od_graph_def, name='')
 
 
-
-
-
 label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
 categories = label_map_util.convert_label_map_to_categories(label_map, max_num_classes=NUM_CLASSES, use_display_name=True)
 category_index = label_map_util.create_category_index(categories)
-
-
 
 
 def load_image_into_numpy_array(image):
@@ -74,19 +56,12 @@ def load_image_into_numpy_array(image):
   return np.array(image.getdata()).reshape(
       (im_height, im_width, 3)).astype(np.uint8)
 
-
-
-
 # Add path to images directory below
-PATH_TO_TEST_IMAGES_DIR = 'test_images'
-TEST_IMAGE_PATHS = [ os.path.join(PATH_TO_TEST_IMAGES_DIR, 'image{}.jpeg'.format(i)) for i in range(1, 2) ]
+#PATH_TO_TEST_IMAGES_DIR = 'test_images'
+#TEST_IMAGE_PATHS = [ os.path.join(PATH_TO_TEST_IMAGES_DIR, 'image{}.jpg'.format(i)) for i in range(1, 2) ]
 
 # Size, in inches, of the output images.
 IMAGE_SIZE = (12, 8)
-
-
-
-
 
 with detection_graph.as_default():
   with tf.compat.v1.Session(graph=detection_graph) as sess:
@@ -100,11 +75,13 @@ with detection_graph.as_default():
     detection_classes = detection_graph.get_tensor_by_name('detection_classes:0')
     num_detections = detection_graph.get_tensor_by_name('num_detections:0')
     i=1
-    for image_path in TEST_IMAGE_PATHS:
+    print("start loop")
+    while True:
+      os.system("libcamera-still -n -t 1 -o test_images/output.jpg")
+      image = Image.open("test_images/output.jpg")
       
-      image = Image.open(image_path)
-      img = cv2.imread(image_path)
-      print (image_path)
+      img = cv2.imread("test_images/output.jpg")
+      print ("done loading")
       height, width, channels = img.shape
       # the array based representation of the image will be used later in order to prepare the
       # result image with boxes and labels on it.
@@ -112,9 +89,11 @@ with detection_graph.as_default():
       # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
       image_np_expanded = np.expand_dims(image_np, axis=0)
       # Actual detection.
-      (boxes, scores, classes, num) = sess.run(
-          [detection_boxes, detection_scores, detection_classes, num_detections],
-          feed_dict={image_tensor: image_np_expanded})
+      print("detec")
+
+      (boxes, scores, classes, num) = sess.run([detection_boxes, detection_scores, detection_classes, num_detections],feed_dict={image_tensor: image_np_expanded})
+      print("detec end")
+
       #finding which box is the bounding box
       y1=0
       y2=0
@@ -130,37 +109,25 @@ with detection_graph.as_default():
       x1=int(round(x1*width))
       y2=int(round(y2*height))
       x2=int(round(x2*width))
-      #cropping the image to the box
-      im=Image.open(image_path)
-      im=im.crop((x1,y1,x2,y2))
-      #plt.figure(figsize=IMAGE_SIZE)
-      #plt.imshow(im)
-      enhancer = ImageEnhance.Brightness(im)
-      factor=3.0
-      im=enhancer.enhance(factor)
       
-      #im=im.filter(ImageFilter.SMOOTH)
-      
-      
-      im.save("pic1.png","png")
-      im2=Image.open("pic1.png")
-      text = pytesseract.image_to_string(im2)
-      print(text)
-      # Visualization of the results of a detection.
-      vis_util.visualize_boxes_and_labels_on_image_array(
-          image_np,
-          np.squeeze(boxes),
-          np.squeeze(classes).astype(np.int32),
-          np.squeeze(scores),
-          category_index,
-          use_normalized_coordinates=True,
-          line_thickness=8)
-      
-      #plt.figure(figsize=IMAGE_SIZE)
-      #plt.imshow(image_np)
-      cv2.imshow("detected",image_np)
-      #plt.figure(figsize=IMAGE_SIZE)
-      #plt.imshow(im)
+      if(x1 != 0):
+          #cropping the image to the box
+          im=Image.open("test_images/output.jpg")
+          im=im.crop((x1,y1,x2,y2))
+          enhancer = ImageEnhance.Brightness(im)
+          factor=3.0
+          im=enhancer.enhance(factor)
+          
+          #im=im.filter(ImageFilter.SMOOTH)
+          
+          
+          im.save("pic1.png","png")
+          im2=Image.open("pic1.png")
+          text = pytesseract.image_to_string(im2, config='--psm 6 -c tessedit_char_whitelist=023456789')
+          print(text)
+      else:
+            print("failed")
+  
       
       
 
