@@ -1,8 +1,4 @@
-
-
-
-# # Speed Limit Detection Demo
-
+# Speed Limit Detection Demo
 
 import numpy as np
 import os
@@ -28,7 +24,7 @@ from utils import visualization_utils as vis_util
 # What model to use.
 MODEL_NAME = 'speed_limit_graph'
 
-
+outputPath = "test_images/image2.jpg"
 # Path to frozen detection graph. This is the actual model that is used for the object detection.
 PATH_TO_CKPT = MODEL_NAME + '/frozen_inference_graph.pb'
 
@@ -77,10 +73,10 @@ with detection_graph.as_default():
     i=1
     print("start loop")
     while True:
-      os.system("libcamera-still -n -t 1 -o test_images/output.jpg")
-      image = Image.open("test_images/output.jpg")
+      #os.system("libcamera-still -n -o test_images/output.jpg")
+      image = Image.open(outputPath)
       
-      img = cv2.imread("test_images/output.jpg")
+      img = cv2.imread(outputPath)
       print ("done loading")
       height, width, channels = img.shape
       # the array based representation of the image will be used later in order to prepare the
@@ -112,10 +108,10 @@ with detection_graph.as_default():
       
       if(x1 != 0):
           #cropping the image to the box
-          im=Image.open("test_images/output.jpg")
+          im=Image.open(outputPath)
           im=im.crop((x1,y1,x2,y2))
           enhancer = ImageEnhance.Brightness(im)
-          factor=3.0
+          factor=1.5
           im=enhancer.enhance(factor)
           
           #im=im.filter(ImageFilter.SMOOTH)
@@ -124,6 +120,7 @@ with detection_graph.as_default():
           im.save("pic1.png","png")
           im2=Image.open("pic1.png")
           text = pytesseract.image_to_string(im2, config='--psm 6 -c tessedit_char_whitelist=023456789')
+          #text = pytesseract.image_to_string(im2, config='--psm 3')
           print(text)
       else:
             print("failed")
