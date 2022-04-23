@@ -17,6 +17,24 @@
 #include <iostream>
 #include <sstream>
 #include <thread>
+#include <fstream>
+#include <cmath>
+#include <vector>
+
+double distance(std::pair<double, double> firstPoint, std::pair<double, double> secondPoint)
+{
+  double degToRad = M_PI / 180;
+  return 6371000 * degToRad * sqrt(pow(cos(firstPoint.first * degToRad) * (firstPoint.second - secondPoint.second), 2) + pow(firstPoint.first - secondPoint.first, 2));
+}
+double getDistance(std::vector<std::pair<double, double>> data)
+{
+  double distanceSum = 0;
+  for(long unsigned int i = 0; i < data.size() - 1; i++)
+  {
+    distanceSum += distance(data[i], data[i + 1]);
+  }
+  return (distanceSum / (data.size() - 1));
+}
 
 enum TimeFormat { LOCALTIME, UTC, UNIX, ISO_8601 };
 
@@ -53,6 +71,7 @@ auto TimespecToTimeStr(const timespec& gpsd_time, TimeFormat time_format = LOCAL
 }
 
 auto main() -> int {
+  std::vector<std::pair<double, double>> data;
   gpsmm gps_rec("localhost", DEFAULT_GPSD_PORT);
 
   if (gps_rec.stream(WATCH_ENABLE | WATCH_JSON) == nullptr) {
@@ -88,7 +107,21 @@ auto main() -> int {
     const auto s_used{gpsd_data->satellites_used};
     const auto time_str{TimespecToTimeStr(gpsd_data->fix.time, ISO_8601)};  // you can change the 2nd argument to LOCALTIME, UTC, UNIX or ISO8601
 
-    std::cout << std::setprecision(8) << std::fixed;  // set output to fixed floating point, 8 decimal precision
-    std::cout << time_str << "," << latitude << "," << longitude << "," << hdop << "," << vdop << "," << pdop << "," << s_vis << "," << s_used << '\n';
+   // std::cout << std::setprecision(8) << std::fixed;  // set output to fixed floating point, 8 decimal precision
+    //std::cout << time_str << "," << latitude << "," << longitude << "," << hdop << "," << vdop << "," << pdop << "," << s_vis << "," << s_used << '\n';
+    static int i = 0;
+    data.push_back(std::make_pair(latitude, longitude));
+    
+    i++;
+    if(i >= 6)
+    {
+      double finalDistance = getDistance(data);
+      data.clear();
+      std::ofstream flag("flag.txt");
+      flag << finalDistance;
+      flag.close();
+      std::cout<<"complete 6"<<std::endl;
+      i=0; 
+    }
   }
 }

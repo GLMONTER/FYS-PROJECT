@@ -283,6 +283,13 @@ while running:
 
     # Flip the display
     pygame.display.flip()
+    
+    if exists("flag.txt"):
+        f = open("flag.txt", "r")
+        currentSpeedText.changeText(f.readline(2))
+        print(f.readline(2))
+        f.close()
+        os.remove("flag.txt")
 
 # Done! Time to quit.
 pygame.quit()
