@@ -20,6 +20,18 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
+#include <unistd.h>
+#include <signal.h>
+
+bool paused = false;
+void handler(int signum)
+{
+  if(signum == SIGUSR1)
+  {
+    std::cout<<"halted exec"<<std::endl;
+    paused = 1 - paused;
+  }
+}
 
 double distance(std::pair<double, double> firstPoint, std::pair<double, double> secondPoint)
 {
@@ -70,7 +82,13 @@ auto TimespecToTimeStr(const timespec& gpsd_time, TimeFormat time_format = LOCAL
   return oss.str();
 }
 
-auto main() -> int {
+auto main() -> int 
+{
+  signal(SIGUSR1, handler);
+  std::ofstream of("gpstest.txt");
+	of<<getpid();
+	of.close();
+  std::cout<<"started gps program"<<std::endl;
   std::vector<std::pair<double, double>> data;
   gpsmm gps_rec("localhost", DEFAULT_GPSD_PORT);
 
@@ -82,6 +100,8 @@ auto main() -> int {
   constexpr auto kWaitingTime{1000000};  // 1000000 is 1 second
 
   for (;;) {
+    if(paused)
+      continue;
     if (!gps_rec.waiting(kWaitingTime)) {
       continue;
     }
@@ -114,8 +134,8 @@ auto main() -> int {
     
     i++;
     if(i >= 6)
-    {
-      double finalDistance = getDistance(data);
+    {                         //convert to mph
+      double finalDistance = (getDistance(data) / 6) * 2.237;
       data.clear();
       std::ofstream flag("flag.txt");
       flag << finalDistance;

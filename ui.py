@@ -42,8 +42,12 @@ signs = {
     '70': '/home/pi/Documents/FYS-PROJECT/images/signs/70.png',
     '75': '/home/pi/Documents/FYS-PROJECT/images/signs/75.png'
 }
+def initGPS():
+    os.system("./gpsd-example")
 
-
+def initDetection():
+    os.system("python3 /home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/speed_limit_search.py")
+    
 #so the save function knows in which order to stitch videos in
 firstFlag = True
 exitFlag = False
@@ -90,16 +94,22 @@ def saveVideo():
         os.system(finalActionMove.format(fileName))
         
     else:
-        
         finalActionMerge = "mkvmerge -o {}.mkv /media/pi/videos/unsaved/primary.h264"
         os.system(finalActionMerge.format(fileName))
         finalActionMove = "mv {}.mkv /media/pi/videos/videos"
         os.system(finalActionMove.format(fileName))
         
-    #init a thread for handling recording
-thread1 = threading.Thread(target=handleRecord)
-thread1.start()
+#init a thread for handling recording
+recordingThread = threading.Thread(target=handleRecord)
+recordingThread.start()
 
+#init a thread for gps
+gpsThread = threading.Thread(target=initGPS)
+gpsThread.start()
+
+#init a thread for detection
+detectionThread = threading.Thread(target=initDetection)
+detectionThread.start()
 
 def Shutdown():
     with open("test.txt") as f:
@@ -108,13 +118,37 @@ def Shutdown():
     global exitFlag
     exitFlag = True
     os.kill(int(content), signal.SIGUSR2)
-   # thread1.join()
+    
     os.system("rm /media/pi/videos/unsaved/primary.h264")
     os.system("rm /media/pi/videos/unsaved/secondary.h264")
+    
+    
+    
+    with open("gpstest.txt") as file:
+        GPScontent = file.read()
+    #send a signal to the gps program to halt execution
+    os.kill(int(GPScontent), signal.SIGUSR1)
+    
     os.system('echo "1" > /sys/class/backlight/rpi_backlight/bl_power')
+    
+    outputFile = open("/home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/flagger.txt")
+    outputFile.write("f");
+    outputFile.close()
 
 
-
+def StartupOnTouch():
+    os.system("rm /home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/flagger.txt")
+    #restart recording thread after pid kill
+    recordingThread.start();
+    
+    with open("gpstest.txt") as file:
+        GPScontent = file.read()
+    #send a signal to the gps program to unpause execution
+    os.kill(int(GPScontent), signal.SIGUSR1)
+    
+    #enable backlight again
+    os.system('echo "0" > /sys/class/backlight/rpi_backlight/bl_power')
+    
 
 class Button(pygame.sprite.Sprite):
     def __init__(self, buttonType, unpressedSrc, pressedSrc,x,y):
@@ -240,11 +274,6 @@ speedList.append(yourSpeedText1)
 speedList.append(yourSpeedText2)
 speedList.append(currentSpeedText)
 
-def getSpeed():
-    # Implement function to get the speed from the GPS. Return it in string form.
-    speed = 0
-    return(str(speed))
-
 def draw():
     # Draw all objects in spriteList
     for i in spriteList:
@@ -264,7 +293,11 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
+        
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if(exitFlag == True):
+                StartupOnTouch();
+        
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 for b in buttonList:
@@ -286,8 +319,12 @@ while running:
     
     if exists("flag.txt"):
         f = open("flag.txt", "r")
-        currentSpeedText.changeText(f.readline(2))
-        print(f.readline(2))
+        if os.path.getsize("flag.txt") < 3:
+            currentSpeedText.changeText(f.readline(1))
+            print(f.readline(1))
+        else:
+            currentSpeedText.changeText(f.readline(2))
+            print(f.readline(2))
         f.close()
         os.remove("flag.txt")
 

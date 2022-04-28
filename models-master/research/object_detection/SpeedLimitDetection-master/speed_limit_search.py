@@ -2,6 +2,9 @@
 
 import numpy as np
 import os
+os.chdir("/home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master")
+print("loading detec")
+from os.path import exists
 import six.moves.urllib as urllib
 import sys
 import tarfile
@@ -24,7 +27,7 @@ from utils import visualization_utils as vis_util
 # What model to use.
 MODEL_NAME = 'speed_limit_graph'
 
-outputPath = "test_images/image2.jpg"
+outputPath = "image.jpg"
 # Path to frozen detection graph. This is the actual model that is used for the object detection.
 PATH_TO_CKPT = MODEL_NAME + '/frozen_inference_graph.pb'
 
@@ -73,40 +76,56 @@ with detection_graph.as_default():
     i=1
     print("start loop")
     while True:
-      #os.system("libcamera-still -n -o test_images/output.jpg")
-      image = Image.open(outputPath)
-      
-      img = cv2.imread(outputPath)
-      print ("done loading")
-      height, width, channels = img.shape
-      # the array based representation of the image will be used later in order to prepare the
-      # result image with boxes and labels on it.
-      image_np = load_image_into_numpy_array(image)
-      # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
-      image_np_expanded = np.expand_dims(image_np, axis=0)
-      # Actual detection.
-      print("detec")
+        if exists("/home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/flagger.txt"):
+            print("halting detection /n")
+            continue
+        if exists("/media/pi/videos/unsaved/secondary.h264") and exists("/media/pi/videos/unsaved/secondary.h264"):
+            if os.path.getsize("/media/pi/videos/unsaved/secondary.h264") > os.path.getsize("/media/pi/videos/unsaved/secondary.h264"):
+                os.system("mkvmerge -o read.mkv /media/pi/videos/unsaved/secondary.h264")
+                os.system("ffmpeg -sseof -3 -i  read.mkv -update 1 -q:v 1 image.jpg")
+            else :
+                os.system("mkvmerge -o read.mkv /media/pi/videos/unsaved/primary.h264")
+                os.system("ffmpeg -sseof -3 -i  read.mkv -update 1 -q:v 1 image.jpg")
 
-      (boxes, scores, classes, num) = sess.run([detection_boxes, detection_scores, detection_classes, num_detections],feed_dict={image_tensor: image_np_expanded})
-      print("detec end")
+        else:
+            os.system("mkvmerge -o read.mkv /media/pi/videos/unsaved/primary.h264")
+            os.system("ffmpeg -sseof -3 -i  read.mkv -update 1 -q:v 1 image.jpg")
+        
+    
+        #os.system("libcamera-still -n -o test_images/output.jpg")
+        image = Image.open(outputPath)
 
-      #finding which box is the bounding box
-      y1=0
-      y2=0
-      x1=0
-      x2=0
-      boxy=np.squeeze(boxes)
-      score=np.squeeze(scores)
-      for i in range(boxy.shape[0]):
-        if score[i]>=0.2:
-            y1,x1,y2,x2=tuple(boxy[i].tolist())
-      
-      y1=int(round(y1*height))
-      x1=int(round(x1*width))
-      y2=int(round(y2*height))
-      x2=int(round(x2*width))
-      
-      if(x1 != 0):
+        img = cv2.imread(outputPath)
+        print ("done loading")
+        height, width, channels = img.shape
+        # the array based representation of the image will be used later in order to prepare the
+        # result image with boxes and labels on it.
+        image_np = load_image_into_numpy_array(image)
+        # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
+        image_np_expanded = np.expand_dims(image_np, axis=0)
+        # Actual detection.
+        print("detec")
+
+        (boxes, scores, classes, num) = sess.run([detection_boxes, detection_scores, detection_classes, num_detections],feed_dict={image_tensor: image_np_expanded})
+        print("detec end")
+
+        #finding which box is the bounding box
+        y1=0
+        y2=0
+        x1=0
+        x2=0
+        boxy=np.squeeze(boxes)
+        score=np.squeeze(scores)
+        for i in range(boxy.shape[0]):
+            if score[i]>=0.2:
+                y1,x1,y2,x2=tuple(boxy[i].tolist())
+
+        y1=int(round(y1*height))
+        x1=int(round(x1*width))
+        y2=int(round(y2*height))
+        x2=int(round(x2*width))
+
+        if(x1 != 0):
           #cropping the image to the box
           im=Image.open(outputPath)
           im=im.crop((x1,y1,x2,y2))
@@ -122,9 +141,13 @@ with detection_graph.as_default():
           text = pytesseract.image_to_string(im2, config='--psm 6 -c tessedit_char_whitelist=023456789')
           #text = pytesseract.image_to_string(im2, config='--psm 3')
           print(text)
-      else:
+        else:
             print("failed")
-  
+        
+        os.system("rm read.mkv")
+        os.system("rm image.jpg")
+
+
       
       
 
