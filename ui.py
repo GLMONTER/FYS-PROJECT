@@ -42,8 +42,10 @@ signs = {
     '70': '/home/pi/Documents/FYS-PROJECT/images/signs/70.png',
     '75': '/home/pi/Documents/FYS-PROJECT/images/signs/75.png'
 }
+os.system("rm /home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/flagger.txt")
+
 def initGPS():
-    os.system("./gpsd-example")
+    os.system("/home/pi/Documents/FYS-PROJECT/./gpsd-example")
 
 def initDetection():
     os.system("python3 /home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/speed_limit_search.py")
@@ -51,29 +53,39 @@ def initDetection():
 #so the save function knows in which order to stitch videos in
 firstFlag = True
 exitFlag = False
-#record two 10 minute videos back to back for stitching
+#record two 1 minute videos back to back for stitching
 def handleRecord():
     while True:
         
         firstFlag = True
-        os.system("./libcamera-vid  -t 600000 -o /media/pi/videos/unsaved/primary.h264 -s")
+        os.system("/home/pi/Documents/FYS-PROJECT/./libcamera-vid -n -t 6000 -o /media/pi/videos/unsaved/primary.h264 -s")
         if exitFlag:
             break
         
         firstFlag = False
-        os.system("./libcamera-vid -t 600000 -o /media/pi/videos/unsaved/secondary.h264 -s")
+        os.system("/home/pi/Documents/FYS-PROJECT/./libcamera-vid -n -t 6000 -o /media/pi/videos/unsaved/secondary.h264 -s")
         if exitFlag:
             break
         
 content = ''
-
+toggled = False
 def toggleVideo():
     #obtain process ID from file genreated from libcamera
-   
-    with open("test.txt") as f:
+    global toggled
+    with open("/home/pi/Documents/FYS-PROJECT/test.txt") as f:
         content = f.read()
-    #send a signal to the recording program to pause or resume recording
-    os.kill(int(content), signal.SIGUSR1)
+        #send a signal to the recording program to pause or resume recording
+        os.kill(int(content), signal.SIGUSR1)
+    if(not toggled):
+        if(not exists("/home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/flagger.txt")):
+            outputFile = open("/home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/flagger.txt", "x")
+            outputFile.write("f");
+            outputFile.close()
+            toggled = True
+    else:
+        os.system("rm /home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/flagger.txt")
+        toggled = False
+    
     #os.system("rm /media/pi/videos/unsaved/primary.h264")
     #os.system("rm /media/pi/videos/unsaved/secondary.h264")
     
@@ -81,7 +93,7 @@ def saveVideo():
     #to help generate random file name so no video file gets overwritten
     fileName = str(random())
     #check if we need to merge the second video
-    if exists("secondary.h264"):
+    if exists("/media/pi/videos/unsaved/secondary.h264"):
         if firstFlag:
             finalActionMergePrim = "mkvmerge -o {}.mkv /media/pi/videos/unsaved/primary.h264 +/media/pi/videos/unsaved/secondary.h264"
             os.system(finalActionMergePrim.format(fileName))
@@ -112,36 +124,45 @@ detectionThread = threading.Thread(target=initDetection)
 detectionThread.start()
 
 def Shutdown():
-    with open("test.txt") as f:
+    with open("/home/pi/Documents/FYS-PROJECT/test.txt") as f:
         content = f.read()
-    #flag the recording thread to exit
-    global exitFlag
-    exitFlag = True
-    os.kill(int(content), signal.SIGUSR2)
+        #flag the recording thread to exit
+        global exitFlag
+        exitFlag = True
+        print(int(content))
+        os.kill(int(content), signal.SIGUSR2)
+    
+    
     
     os.system("rm /media/pi/videos/unsaved/primary.h264")
     os.system("rm /media/pi/videos/unsaved/secondary.h264")
     
     
     
-    with open("gpstest.txt") as file:
+    with open("/home/pi/Documents/FYS-PROJECT/gpstest.txt") as file:
         GPScontent = file.read()
     #send a signal to the gps program to halt execution
     os.kill(int(GPScontent), signal.SIGUSR1)
     
     os.system('echo "1" > /sys/class/backlight/rpi_backlight/bl_power')
-    
-    outputFile = open("/home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/flagger.txt")
-    outputFile.write("f");
-    outputFile.close()
+    if(not exists("/home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/flagger.txt")):
+        outputFile = open("/home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/flagger.txt", "x")
+        outputFile.write("f");
+        outputFile.close()
 
 
 def StartupOnTouch():
+    global exitFlag
+    exitFlag = False
+    print("ON")
+    
     os.system("rm /home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/flagger.txt")
     #restart recording thread after pid kill
-    recordingThread.start();
+    #init a thread for handling recording
+    recordingThreadSecondary = threading.Thread(target=handleRecord)
+    recordingThreadSecondary.start()
     
-    with open("gpstest.txt") as file:
+    with open("/home/pi/Documents/FYS-PROJECT/gpstest.txt") as file:
         GPScontent = file.read()
     #send a signal to the gps program to unpause execution
     os.kill(int(GPScontent), signal.SIGUSR1)
@@ -170,16 +191,21 @@ class Button(pygame.sprite.Sprite):
         self.rect = self.surf.get_rect().move(self.x,self.y)
 
         # Call type specific function
-        if(self.buttonType == 'recordButton'):
+        if(self.buttonType == 'recordButton' and not exitFlag):
             saveVideo()
-        elif(self.buttonType == 'viewButton'):
+        elif(self.buttonType == 'viewButton' and not exitFlag):
             self.toggleScreens(speedList)
-        elif(self.buttonType == 'toggleButton'):
+        elif(self.buttonType == 'shutdownButton'):
+            if (not exitFlag and self.isDrawn):
+                self.isDrawn = False
+                Shutdown()
+        elif(self.buttonType == 'toggleButton' and shutdownButton.isDrawn):
             #we do this to toggle the button instead of press it.
             tempMemory = self.unpressedSrc
             self.unpressedSrc = self.pressedSrc
             self.pressedSrc = tempMemory
             toggleVideo()
+            print("TOGGGGGGGGGGGGGGGGGGGGGGGGGGGG")
             
     
     def pressUp(self):
@@ -247,15 +273,20 @@ textList = []
 #Objects
 recordButton = Button("recordButton",'/home/pi/Documents/FYS-PROJECT/images/recordUnpressed.png','/home/pi/Documents/FYS-PROJECT/images/recordPressed.png',50,75)
 viewButton = Button("viewButton",'/home/pi/Documents/FYS-PROJECT/images/viewUnpressed.png','/home/pi/Documents/FYS-PROJECT/images/viewPressed.png',50,150)
-toggleButton = Button("toggleButton", '/home/pi/Documents/FYS-PROJECT/images/toggle.png','/home/pi/Documents/FYS-PROJECT/images/untoggle.png',50,225)
+toggleButton = Button("toggleButton", '/home/pi/Documents/FYS-PROJECT/images/pauseUnpressed.png','/home/pi/Documents/FYS-PROJECT/images/resumeUnpressed.png',50,225)
+shutdownButton = Button("shutdownButton", '/home/pi/Documents/FYS-PROJECT/images/shutdownUnpressed.png','/home/pi/Documents/FYS-PROJECT/images/shutdownPressed.png',50,300)
 
 spriteList.add(recordButton)
 spriteList.add(viewButton)
 spriteList.add(toggleButton)
+spriteList.add(shutdownButton)
+
 
 buttonList.add(recordButton)
 buttonList.add(viewButton)
 buttonList.add(toggleButton)
+buttonList.add(shutdownButton)
+
 
 speedBackground = Entity('/home/pi/Documents/FYS-PROJECT/images/speedBackground.png',320,70)
 spriteList.add(speedBackground)
@@ -266,14 +297,13 @@ speedList.append(speedSign)
 
 yourSpeedText1 = Text(425,160,'Your','freesansbold.ttf',44,(255,255,255))
 yourSpeedText2 = Text(425,210,'Speed','freesansbold.ttf',44,(255,255,255))
-currentSpeedText = Text(425,300,'00','freesansbold.ttf',68,(255,255,255))
+currentSpeedText = Text(425,300,'--','freesansbold.ttf',68,(255,255,255))
 textList.append(yourSpeedText1)
 textList.append(yourSpeedText2)
 textList.append(currentSpeedText)
 speedList.append(yourSpeedText1)
 speedList.append(yourSpeedText2)
 speedList.append(currentSpeedText)
-
 def draw():
     # Draw all objects in spriteList
     for i in spriteList:
@@ -289,12 +319,21 @@ def draw():
 # Logic Loop
 running = True
 while running:
-    # Event check
+    if(exitFlag == False):
+        shutdownButton.isDrawn = True
+    if firstFlag:
+        f = open("/home/pi/Documents/FYS-PROJECT/Y.txt", "w")
+        f.write("TESTDATA")
+        f.close()
+    else:
+        os.system("rm /home/pi/Documents/FYS-PROJECT/Y.txt")
+        # Event check
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         
         if event.type == pygame.MOUSEBUTTONDOWN:
+            print("mouse down")
             if(exitFlag == True):
                 StartupOnTouch();
         
@@ -317,16 +356,29 @@ while running:
     # Flip the display
     pygame.display.flip()
     
-    if exists("flag.txt"):
-        f = open("flag.txt", "r")
-        if os.path.getsize("flag.txt") < 3:
-            currentSpeedText.changeText(f.readline(1))
-            print(f.readline(1))
+    if exists("/home/pi/Documents/FYS-PROJECT/flag.txt"):
+        gpsFile = open("/home/pi/Documents/FYS-PROJECT/flag.txt", "r")
+        if os.path.getsize("/home/pi/Documents/FYS-PROJECT/flag.txt") < 3:
+            currentSpeedText.changeText(gpsFile.readline(1))
+            print(gpsFile.readline(1))
         else:
-            currentSpeedText.changeText(f.readline(2))
-            print(f.readline(2))
-        f.close()
-        os.remove("flag.txt")
+            currentSpeedText.changeText(gpsFile.readline(2))
+            print(gpsFile.readline(2))
+        gpsFile.close()
+        os.remove("/home/pi/Documents/FYS-PROJECT/flag.txt")
+        
+    if exists("/home/pi/Documents/FYS-PROJECT/speed.txt"):
+        speedFile = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "r")
+        if os.path.getsize("/home/pi/Documents/FYS-PROJECT/speed.txt") < 2:
+            #print(speedFile.readline(1))
+            speedSign.changeSign(speedFile.readline(1))
+            
+        else:
+            #print(speedFile.readline(2))
+            speedSign.changeSign(speedFile.readline(2))
+            
+        speedFile.close()
+        #os.remove("/home/pi/Documents/FYS-PROJECT/speed.txt")
 
 # Done! Time to quit.
 pygame.quit()

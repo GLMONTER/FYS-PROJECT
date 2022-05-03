@@ -16,6 +16,8 @@ from io import StringIO
 from matplotlib import pyplot as plt
 from PIL import Image,ImageEnhance,ImageFilter
 import pytesseract
+import time
+
 pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 
 sys.path.append("..")
@@ -75,24 +77,26 @@ with detection_graph.as_default():
     num_detections = detection_graph.get_tensor_by_name('num_detections:0')
     i=1
     print("start loop")
+    os.system("rm read.mkv")
+    os.system("rm image.jpg")
     while True:
         if exists("/home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/flagger.txt"):
-            print("halting detection /n")
+            print("halting detection")
+            time.sleep(2)
             continue
-        if exists("/media/pi/videos/unsaved/secondary.h264") and exists("/media/pi/videos/unsaved/secondary.h264"):
-            if os.path.getsize("/media/pi/videos/unsaved/secondary.h264") > os.path.getsize("/media/pi/videos/unsaved/secondary.h264"):
-                os.system("mkvmerge -o read.mkv /media/pi/videos/unsaved/secondary.h264")
-                os.system("ffmpeg -sseof -3 -i  read.mkv -update 1 -q:v 1 image.jpg")
-            else :
-                os.system("mkvmerge -o read.mkv /media/pi/videos/unsaved/primary.h264")
-                os.system("ffmpeg -sseof -3 -i  read.mkv -update 1 -q:v 1 image.jpg")
-
-        else:
+        
+        if exists("/home/pi/Documents/FYS-PROJECT/Y.txt"):
             os.system("mkvmerge -o read.mkv /media/pi/videos/unsaved/primary.h264")
             os.system("ffmpeg -sseof -3 -i  read.mkv -update 1 -q:v 1 image.jpg")
-        
+            os.system("rm read.mkv")
+        else:
+            os.system("mkvmerge -o read.mkv /media/pi/videos/unsaved/secondary.h264")
+            os.system("ffmpeg -sseof -3 -i  read.mkv -update 1 -q:v 1 image.jpg")
+            os.system("rm read.mkv")
     
         #os.system("libcamera-still -n -o test_images/output.jpg")
+        if(not exists(outputPath)):
+            continue
         image = Image.open(outputPath)
 
         img = cv2.imread(outputPath)
@@ -129,9 +133,9 @@ with detection_graph.as_default():
           #cropping the image to the box
           im=Image.open(outputPath)
           im=im.crop((x1,y1,x2,y2))
-          enhancer = ImageEnhance.Brightness(im)
-          factor=1.5
-          im=enhancer.enhance(factor)
+#           enhancer = ImageEnhance.Brightness(im)
+#           factor=1.5
+#           im=enhancer.enhance(factor)
           
           #im=im.filter(ImageFilter.SMOOTH)
           
@@ -141,11 +145,75 @@ with detection_graph.as_default():
           text = pytesseract.image_to_string(im2, config='--psm 6 -c tessedit_char_whitelist=023456789')
           #text = pytesseract.image_to_string(im2, config='--psm 3')
           print(text)
+          if text.find("15") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("15")
+              f.close
+          elif text.find("20") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("20")
+              f.close
+          elif text.find("25") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("25")
+              f.close
+          elif text.find("30") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("30")
+              f.close
+          elif text.find("35") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("35")
+              f.close()
+          elif text.find("40") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("40")
+              f.close()
+          elif text.find("40") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("40")
+              f.close()
+          elif text.find("45") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("45")
+              f.close()
+          elif text.find("50") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("50")
+              f.close()
+          elif text.find("55") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("55")
+              f.close()
+          elif text.find("60") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("60")
+              f.close()
+          elif text.find("65") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("65")
+              f.close()
+          elif text.find("70") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("70")
+              f.close()
+          elif text.find("75") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("75")
+              f.close()
+          elif text.find("80") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("80")
+              f.close()
+          elif text.find("85") >= 0:
+              f = open("/home/pi/Documents/FYS-PROJECT/speed.txt", "w")
+              f.write("85")
+              f.close()
         else:
             print("failed")
         
-        os.system("rm read.mkv")
-        os.system("rm image.jpg")
+        os.system("rm /home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/read.mkv")
+        os.system("rm /home/pi/Documents/FYS-PROJECT/models-master/research/object_detection/SpeedLimitDetection-master/image.jpg")
 
 
       
